@@ -7,9 +7,13 @@
 <body>
 <div>
   <div class='center'>
-    <div class='title'>Classify Cat or Dog Images</div>
+    <div class='title'>Classify Cat or Dog Breed</div>
     <p>
-      Use images of <strong>cat</strong> or <strong>dog</strong> 
+      This work is a fork of https://github.com/render-examples/fastai-v3 and modified to classify cat or dog breed.
+    </p>
+    <p>
+      The classifier is ResNet34 trained on The Oxford-IIIT Pet Dataset (https://www.robots.ox.ac.uk/~vgg/data/pets/). The training used FastAI v1 
+      and achieved 93.3% accuracy on validation set.
     </p>
     <div class='content'>
       <div class='no-display'>
@@ -20,6 +24,9 @@
                accept='image/*'
                onchange='showPicked(this)'>
       </div>
+    <p>
+      Use image of <strong>cat</strong> or <strong>dog</strong> 
+    </p>
       <button class='choose-file-button' type='button' onclick='showPicker()'>Select Image</button>
       <div class='upload-label'>
         <label id='upload-label'>No file chosen</label>
