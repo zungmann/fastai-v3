@@ -10,10 +10,12 @@ from starlette.responses import HTMLResponse, JSONResponse
 from starlette.staticfiles import StaticFiles
 
 #export_file_url = 'https://www.dropbox.com/s/6bgq8t6yextloqp/export.pkl?raw=1'
-export_file_url = 'https://drive.google.com/uc?export=download&id=14n2pq1gmVmMePtOkiIwdiYMV-UPH77uS'
-export_file_name = 'export.pkl'
+export_file_url1 = 'https://drive.google.com/uc?export=download&id=14n2pq1gmVmMePtOkiIwdiYMV-UPH77uS'
+export_file_name1 = 'resnet34_clscatdog.pkl'
+export_file_url2 = 'https://drive.google.com/uc?export=download&id=1A8m2KfyGF5TcX6Ws8eCCvALcl19Z7LCg'
+export_file_name2 = 'resnet34_clsimagenet.pkl'
 
-classes = ['black', 'grizzly', 'teddys']
+#classes = ['black', 'grizzly', 'teddys']
 path = Path(__file__).parent
 
 app = Starlette()
@@ -30,11 +32,25 @@ async def download_file(url, dest):
                 f.write(data)
 
 
-async def setup_learner():
-    await download_file(export_file_url, path / 'models' / export_file_name)
+async def setup_learner1():
+    await download_file(export_file_url1, path / 'models' / export_file_name1)
     try:
-        learn = load_learner(path/'models', export_file_name)
-        return learn
+        learn1 = load_learner(path/'models', export_file_name1)
+        return learn1
+    except RuntimeError as e:
+        if len(e.args) > 0 and 'CPU-only machine' in e.args[0]:
+            print(e)
+            message = "\n\nThis model was trained with an old version of fastai and will not work in a CPU environment.\n\nPlease update the fastai library in your training environment and export your model again.\n\nSee instructions for 'Returning to work' at https://course.fast.ai."
+            raise RuntimeError(message)
+        else:
+            raise
+
+
+async def setup_learner2():
+    await download_file(export_file_url2, path / 'models' / export_file_name2)
+    try:
+        learn2 = load_learner(path/'models', export_file_name2)
+        return learn2
     except RuntimeError as e:
         if len(e.args) > 0 and 'CPU-only machine' in e.args[0]:
             print(e)
@@ -45,8 +61,9 @@ async def setup_learner():
 
 
 loop = asyncio.get_event_loop()
-tasks = [asyncio.ensure_future(setup_learner())]
-learn = loop.run_until_complete(asyncio.gather(*tasks))[0]
+tasks = [asyncio.ensure_future(setup_learner1()), asyncio.ensure_future(setup_learner2())]
+#learn = loop.run_until_complete(asyncio.gather(*tasks))[0]
+learn1, learn2 = loop.run_until_complete(asyncio.gather(*tasks))
 loop.close()
 
 
@@ -61,8 +78,26 @@ async def analyze(request):
     img_data = await request.form()
     img_bytes = await (img_data['file'].read())
     img = open_image(BytesIO(img_bytes))
-    prediction = learn.predict(img)[0]
-    return JSONResponse({'result': str(prediction)})
+    pred_class,pred_idx,preds = learn1.predict(img)
+    acc = preds[pred_idx].item()
+    if acc < 0.4:#probably not cat or dog
+        pred_class,pred_idx,preds = learn2.predict(img)#predict using imagenet classifier on 1000 possible classes
+        preds_sorted, idxs = preds.sort(descending=True)[:3]
+
+        pred_2_class = learn2.data.classes[idxs[1]]
+        pred_3_class = learn2.data.classes[idxs[2]]
+
+        pred_1_prob = np.round(100*preds_sorted[0].item(),2)
+        pred_2_prob = np.round(100*preds_sorted[1].item(),2)
+        pred_3_prob = np.round(100*preds_sorted[2].item(),2)
+        preds_best3 = [f'{pred_class} ({pred_1_prob}%)', f'{pred_2_class} ({pred_2_prob}%)', f'{pred_3_class} ({pred_3_prob}%)']
+
+        result = f'I think it is not cat nor dog.\n Probably: (1st) {preds_best3[0]}\n(2nd) {preds_best3[1]}\n(3rd) {preds_best3[2]}'
+
+    else:
+        acc = np.round(100*acc,2)
+        result = f'{str(pred_class)} ({acc}%)'
+    return JSONResponse({'result': result, 'accuracy': acc})
 
 
 if __name__ == '__main__':
