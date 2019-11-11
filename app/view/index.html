@@ -32,7 +32,14 @@
         <label id='upload-label'>No file chosen</label>
       </div>
       <div>
-        <img id='image-picked' class='no-display' alt='Chosen Image' height='200'>
+        <img id='image-picked' class='no-display' alt='Chosen Image' height='400'>
+      </div>
+      <div>
+        <img id='resized-image' class='no-display' alt='Chosen Image' height='400'>
+      </div>
+      <div class='no-display'>
+        <input id="original" type="radio" name="imagetype" value="Original">Use original image<br>
+        <input id="resized" type="radio" name="imagetype" value="Resized">Use resized image<br>
       </div>
       <div class='analyze'>
         <button id='analyze-button' class='analyze-button' type='button' onclick='analyze()'>Analyze</button>

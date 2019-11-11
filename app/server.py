@@ -1,6 +1,7 @@
 import aiohttp
 import asyncio
 import uvicorn
+import base64
 from fastai import *
 from fastai.vision import *
 from io import BytesIO
@@ -75,9 +76,22 @@ async def homepage(request):
 
 @app.route('/analyze', methods=['POST'])
 async def analyze(request):
-    img_data = await request.form()
-    img_bytes = await (img_data['file'].read())
-    img = open_image(BytesIO(img_bytes))
+    data = await request.form()
+    #print(data)
+
+    #if data['file'] is not None:
+    if 'file' in data.keys():
+      img_bytes = await (data['file'].read())
+      img = open_image(BytesIO(img_bytes))
+    elif 'image' in data.keys():
+      imgdata = re.sub('^data:image/.+;base64,', '', data['image'])
+      imgdata = base64.b64decode(imgdata)
+      img = open_image(BytesIO(imgdata))
+      #img = Image.open(io.BytesIO(imgdata))
+    else:
+        return JSONResponse({'result': 'NA', 'accuracy': 0.0})
+    
+    print(img.shape)
     pred_class,pred_idx,preds = learn1.predict(img)
     acc = preds[pred_idx].item()
     if acc < 0.4:#probably not cat or dog
